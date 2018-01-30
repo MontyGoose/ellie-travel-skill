@@ -1,0 +1,27 @@
+{
+  "name": "ellie-travel-skill",
+  "version": "1.0.0",
+  "description": "Alexa Skill: Ellie Travel",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:MontyGoose/ellie-travel-skill.git"
+  },
+  "keywords": [
+    "AWS",
+    "Alexa"
+  ],
+  "author": "Andy Parry",
+  "license": "Apache License 2.0",
+  "dependencies": {
+    "alexa-sdk": "^1.0.15",
+    "chai": "^4.1.2",
+    "mocha": "^4.0.1"
+  }
+}
