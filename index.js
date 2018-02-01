@@ -1,4 +1,5 @@
 const Alexa = require('alexa-sdk');
+const axios = require('axios');
 
 const languageStrings = {
     'en': {
@@ -23,13 +24,11 @@ const data = {
 
 const SKILL_NAME = "Ellie's Travel Skill";
 
-// Weather courtesy of the Yahoo Weather API.
-// This free API recommends no more than 2000 calls per day
 
 const weatherAPI = {
-    host: 'query.yahooapis.com',
+    host: 'https://query.yahooapis.com',
     port: 443,
-    path: `/v1/public/yql?q=select%20*%20from%20weather.forecast%20where%20woeid%20in%20(select%20woeid%20from%20geo.places(1)%20where%20text%3D%22${encodeURIComponent(data.city)}%2C%20${data.state}%22)&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys`,
+    path: `/v1/public/yql?q=select%20*%20from%20weather.forecast%20where%20woeid%20in%20(select%20woeid%20from%20geo.places(1)%20where%20text%3D%22${encodeURIComponent(data.city)}%2C%20${data.postcode}%22)&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys`,
     method: 'GET'
 };
 const busAPI = {
@@ -68,10 +67,11 @@ const handlers = {
     },
 
     'LatestIntent': function () {
-        var project = randomArrayElement(data.projects);
-        this.attributes['project'] = project.name;
-
-        var say = 'This is one of the great projects we`re currently working on, ' + project.name + '. Would you like to hear more?';
+        // get weather
+        var weatherData = getWeather();
+        // get buses
+        // get trains
+        var say = 'Some weather; '+ weatherData.currentTemp;
         this.response.speak(say).listen(say);
         this.emit(':responseReady');
     },
@@ -90,47 +90,30 @@ const handlers = {
 
     },
 
-    'AttractionIntent': function () {
-        var distance = 200;
-        if (this.event.request.intent.slots.distance.value) {
-            distance = this.event.request.intent.slots.distance.value;
-        }
-
-        var attraction = randomArrayElement(getAttractionsByDistance(distance));
-
-        var say = 'Try '
-            + attraction.name + ', which is '
-            + (attraction.distance == "0" ? 'right downtown. ' : attraction.distance + ' miles away. Have fun! ')
-            + attraction.description;
-
-        this.response.speak(say);
-        this.emit(':responseReady');
-    },
-
     'GoOutIntent': function () {
 
-        getWeather( ( localTime, currentTemp, currentCondition) => {
-            // time format 10:34 PM
-            // currentTemp 72
-            // currentCondition, e.g.  Sunny, Breezy, Thunderstorms, Showers, Rain, Partly Cloudy, Mostly Cloudy, Mostly Sunny
-
-            // sample API URL for Irvine, CA
-            // https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20weather.forecast%20where%20woeid%20in%20(select%20woeid%20from%20geo.places(1)%20where%20text%3D%22irvine%2C%20ca%22)&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys
-
-            var say = 'It is ' + localTime
-                + ' and the weather in ' + data.city
-                + ' is '
-                + currentTemp + ' and ' + currentCondition;
-            this.response.speak(say);
-            this.emit(':responseReady');
-
-            // TODO
-            // Decide, based on current time and weather conditions,
-            // whether to go out to a local beach or park;
-            // or recommend a movie theatre; or recommend staying home
-
-
-        });
+        // getWeather( ( localTime, currentTemp, currentCondition) => {
+        //     // time format 10:34 PM
+        //     // currentTemp 72
+        //     // currentCondition, e.g.  Sunny, Breezy, Thunderstorms, Showers, Rain, Partly Cloudy, Mostly Cloudy, Mostly Sunny
+        //
+        //     // sample API URL for Irvine, CA
+        //     // https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20weather.forecast%20where%20woeid%20in%20(select%20woeid%20from%20geo.places(1)%20where%20text%3D%22irvine%2C%20ca%22)&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys
+        //
+        //     var say = 'It is ' + localTime
+        //         + ' and the weather in ' + data.city
+        //         + ' is '
+        //         + currentTemp + ' and ' + currentCondition;
+        //     this.response.speak(say);
+        //     this.emit(':responseReady');
+        //
+        //     // TODO
+        //     // Decide, based on current time and weather conditions,
+        //     // whether to go out to a local beach or park;
+        //     // or recommend a movie theatre; or recommend staying home
+        //
+        //
+        // });
     },
 
     'AMAZON.NoIntent': function () {
@@ -155,51 +138,27 @@ const handlers = {
 };
 
 
-function getProjectByName(projectName) {
 
-    var project = {};
-    for (var i = 0; i < data.projects.length; i++) {
+function getWeather() {
+  var weatherData = getData(weatherAPI);
+  var channelObj = weatherData.query.results.channel;
+  var localTime = channelObj.lastBuildDate.toString();
 
-        if(data.projects[i].name == projectName) {
-            project = data.projects[i];
-        }
-    }
-    return project;
+  return {
+    localTime: localTime.substring(17, 25).trim(),
+    currentTemp: channelObj.item.condition.temp,
+    currentCondition: channelObj.item.condition.text
+  }
 }
 
-
-
-function getWeather(callback) {
-    var https = require('https');
-
-
-    var req = https.request(myAPI, res => {
-        res.setEncoding('utf8');
-        var returnData = "";
-
-        res.on('data', chunk => {
-            returnData = returnData + chunk;
-        });
-        res.on('end', () => {
-            var channelObj = JSON.parse(returnData).query.results.channel;
-
-            var localTime = channelObj.lastBuildDate.toString();
-            localTime = localTime.substring(17, 25).trim();
-
-            var currentTemp = channelObj.item.condition.temp;
-
-            var currentCondition = channelObj.item.condition.text;
-
-            callback(localTime, currentTemp, currentCondition);
-
-        });
-
-    });
-    req.end();
-}
-
-function randomArrayElement(array) {
-    var i = 0;
-    i = Math.floor(Math.random() * array.length);
-    return(array[i]);
+//Generic get some data and stuff
+function getData(api) {
+  console.log(api);
+  axios.get(api.host + api.path).then(function(response) {
+    console.log(response);
+    return JSON.parse(response)
+  }).catch(function(error){
+    console.log('ABORT!')
+    console.log(error)
+  });
 }
