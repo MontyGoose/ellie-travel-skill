@@ -28,14 +28,17 @@ function DataHelper() {
   this.getWeather = function() {
     var weatherData = getData(weatherAPI);
     weatherData.then(function(data) {
-      var channelObj = data.query.results.channel;
-      var localTime = channelObj.lastBuildDate.toString();
-      return {
-        localTime: localTime.substring(17, 25).trim(),
-        currentTemp: channelObj.item.condition.temp,
-        currentCondition: channelObj.item.condition.text
-      }
+      return data.query.results
     }, function(err) {
+      console.log(err);
+    }).then(function(results) {
+        var localTime = results.channel.lastBuildDate.toString();
+        return {
+          localTime: localTime.substring(17, 25).trim(),
+          currentTemp: results.channel.item.condition.temp,
+          currentCondition: results.channel.item.condition.text
+        }
+    }).catch(function(err){
       console.log(err);
     });
   }
@@ -46,9 +49,7 @@ function DataHelper() {
       port: 8080
     }
   });
-  const axiosClient = axios.create({
-    //  httpsAgent: tunnelAgent
-  });
+  const axiosClient = axios.create({httpsAgent: tunnelAgent});
 
   //Generic get some data and stuff
   function getData(api) {
