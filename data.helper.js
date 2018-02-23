@@ -7,10 +7,7 @@ var tunnel = require('tunnel');
 function DataHelper() {
 
   const weatherAPI = {
-    host: 'https://query.yahooapis.com:443',
-    port: 443,
-    path: '/v1/public/yql?q=select%20*%20from%20weather.forecast%20where%20woeid%20in%20(select%20woeid%20from%20geo.places(1)%20where%20text%3D%22${encodeURIComponent(data.city)}%2C%20${data.postcode}%22)&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys',
-    method: 'GET'
+    api: 'http://api.openweathermap.org/data/2.5/weather?q=London,uk&appid=7ba6bf1f1d54680d4405671eb293a8ae'
   };
   const busAPI = {
     host: 'query.yahooapis.com',
@@ -28,15 +25,12 @@ function DataHelper() {
   this.getWeather = function() {
     var weatherData = getData(weatherAPI);
     weatherData.then(function(data) {
-      return data.query.results
+      return data;
     }, function(err) {
       console.log(err);
     }).then(function(results) {
-        var localTime = results.channel.lastBuildDate.toString();
         return {
-          localTime: localTime.substring(17, 25).trim(),
-          currentTemp: results.channel.item.condition.temp,
-          currentCondition: results.channel.item.condition.text
+          weather: results.weather[0].main
         }
     }).catch(function(err){
       console.log(err);
@@ -49,13 +43,15 @@ function DataHelper() {
       port: 8080
     }
   });
-  const axiosClient = axios.create({httpsAgent: tunnelAgent});
+  const axiosClient = axios.create(
+  //  {httpsAgent: tunnelAgent}
+  );
 
   //Generic get some data and stuff
   function getData(api) {
 
     return new Promise(function(resolve, reject) {
-      axiosClient.get(api.host + api.path).then(function(response) {
+      axiosClient.get(api.api).then(function(response) {
         console.log(response.data);
         resolve(JSON.parse(JSON.stringify(response.data)));
       }).catch(function(error) {
