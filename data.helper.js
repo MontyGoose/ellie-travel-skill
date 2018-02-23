@@ -35,6 +35,8 @@ function DataHelper() {
         currentTemp: channelObj.item.condition.temp,
         currentCondition: channelObj.item.condition.text
       }
+    }, function(err) {
+      console.log(err);
     });
   }
 
