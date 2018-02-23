@@ -27,44 +27,41 @@ function DataHelper() {
 
   this.getWeather = function() {
     var weatherData = getData(weatherAPI);
-    var channelObj = weatherData.query.results.channel;
-    var localTime = channelObj.lastBuildDate.toString();
-
-    return {
-      localTime: localTime.substring(17, 25).trim(),
-      currentTemp: channelObj.item.condition.temp,
-      currentCondition: channelObj.item.condition.text
-    }
+    weatherData.then(function(data) {
+      var channelObj = data.query.results.channel;
+      var localTime = channelObj.lastBuildDate.toString();
+      return {
+        localTime: localTime.substring(17, 25).trim(),
+        currentTemp: channelObj.item.condition.temp,
+        currentCondition: channelObj.item.condition.text
+      }
+    });
   }
 
-  var axios_config = {
+  var tunnelAgent = tunnel.httpsOverHttp({
     proxy: {
       host: 'proxy.pershing.com',
-      port: 8008
+      port: 8080
     }
-  };
-
-
-var tunnelAgent = tunnel.httpsOverHttp({
-    proxy: {
-        host: 'proxy.pershing.com',
-        port: 8080,
-    },
-});
-const axiosClient = axios.create({
-  httpsAgent: tunnelAgent
-});
+  });
+  const axiosClient = axios.create({
+    //  httpsAgent: tunnelAgent
+  });
 
   //Generic get some data and stuff
   function getData(api) {
-    axiosClient.get(api.host + api.path).then(function(response) {
-      console.log(response.data);
-      return JSON.parse(JSON.stringify(response.data))
-    }).catch(function(error) {
-      console.log('ABORT!')
-      console.log(error)
+
+    return new Promise(function(resolve, reject) {
+      axiosClient.get(api.host + api.path).then(function(response) {
+        console.log(response.data);
+        resolve(JSON.parse(JSON.stringify(response.data)));
+      }).catch(function(error) {
+        console.log('ABORT!')
+        reject(error);
+      });
     });
   }
+
 }
 
 module.exports = DataHelper;
