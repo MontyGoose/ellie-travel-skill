@@ -2,40 +2,67 @@
 const axios = require('axios');
 var tunnel = require('tunnel');
 
-// need to add proxy support - and then use environment variables ...
-
 function DataHelper() {
 
-  const weatherAPI = {
-    api: 'http://api.openweathermap.org/data/2.5/weather?q=London,uk&appid=7ba6bf1f1d54680d4405671eb293a8ae'
-  };
-  const busAPI = {
-    host: 'query.yahooapis.com',
-    port: 443,
-    path: '/v1/public/yql?q=select%20*%20from%20weather.forecast%20where%20woeid%20in%20(select%20woeid%20from%20geo.places(1)%20where%20text%3D%22${encodeURIComponent(data.city)}%2C%20${data.state}%22)&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys',
-    method: 'GET'
-  };
-  const trainAPI = {
-    host: 'query.yahooapis.com',
-    port: 443,
-    path: '/v1/public/yql?q=select%20*%20from%20weather.forecast%20where%20woeid%20in%20(select%20woeid%20from%20geo.places(1)%20where%20text%3D%22${encodeURIComponent(data.city)}%2C%20${data.state}%22)&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys',
-    method: 'GET'
+  const apis = {
+    weatherapi: 'http://api.openweathermap.org/data/2.5/weather?q=London,uk&appid='+process.env.WEATHERAPI_KEY,
+    busapi: 'https://transportapi.com:443/v3/uk/bus/stop/490006992S/live.json?app_id='+process.env.TRANSPORTAPI_ID+'&app_key='+process.env.TRANSPORTAPI_KEY+'&group=no&nextbuses=yes',
+    trainapi: 'https://transportapi.com:443/v3/uk/train/station/HNH/live.json?app_id='+process.env.TRANSPORTAPI_ID+'&app_key='+process.env.TRANSPORTAPI_KEY+'&calling_at=VIC&darwin=false&train_status=passenger'
   };
 
+  // functions should take 'config' - for now pass back 'raw' data or transposed - default transposed
+  // could look to supply stations (from to), time(s), bus service(s) etc
+  // calling application will handle (route to somewhere and times - like a my journey application)
+
   this.getWeather = function() {
-    var weatherData = getData(weatherAPI);
-    weatherData.then(function(data) {
-      return data;
-    }, function(err) {
-      console.log(err);
-    }).then(function(results) {
-        return {
-          weather: results.weather[0].main
-        }
-    }).catch(function(err){
-      console.log(err);
+    return new Promise(function(resolve, reject) {
+      getData(apis.weatherapi).then(function(data) {
+        resolve({weather: data.weather[0]});
+      }).catch(function(err) {
+        reject(err);
+      })
     });
   }
+  this.getBus = function() {
+    return new Promise(function(resolve, reject) {
+      getData(apis.busapi).then(function(data) {
+        resolve({buses: data.departures.all[0]});
+      }).catch(function(err) {
+        reject(err);
+      })
+    });
+  }
+  this.getTrain = function() {
+    return new Promise(function(resolve, reject) {
+      getData(apis.trainapi).then(function(data) {
+        resolve({trains: data.departures.all[0]});
+      }).catch(function(err) {
+        reject(err);
+      })
+    });
+  }
+
+
+function transposeBus(data) {
+  /*
+  whare the times for the next 5 buses genrally or for specified service(s)
+  */
+}
+
+function transposeTrain(data) {
+  /*
+  using the next 5 trains - what;s the service generally like (late or not)
+  if there is a specific train we're intersted in - what's it's time
+  */
+}
+
+function transposeWeather(data){
+  /*
+  whats the weather 'like'
+  */
+}
+
+
 
   var tunnelAgent = tunnel.httpsOverHttp({
     proxy: {
@@ -43,16 +70,14 @@ function DataHelper() {
       port: 8080
     }
   });
-  const axiosClient = axios.create(
-  //  {httpsAgent: tunnelAgent}
-  );
+  const axiosClient = axios.create({
+    //httpsAgent: tunnelAgent
+  });
 
   //Generic get some data and stuff
   function getData(api) {
-
     return new Promise(function(resolve, reject) {
-      axiosClient.get(api.api).then(function(response) {
-        console.log(response.data);
+      axiosClient.get(api).then(function(response) {
         resolve(JSON.parse(JSON.stringify(response.data)));
       }).catch(function(error) {
         console.log('ABORT!')
