@@ -24,10 +24,11 @@ describe('dataHelper', function() {
       var buses = subject.getBus();
       return expect(buses).to.eventually.be.a('object');
     });
-  });  describe('#getTrain', function() {
-      it('returns some train stuff', function() {
-        var trains = subject.getTrain();
-        return expect(trains).to.eventually.be.a('object');
-      });
+  });
+  describe('#getTrain', function() {
+    it('returns some train stuff', function() {
+      var trains = subject.getTrain();
+      return expect(trains).to.eventually.be.a('object');
     });
+  });
 });
